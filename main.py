@@ -1,6 +1,5 @@
 import markovify
 import MeCab
-# import ipadic
 
 # Load file
 # text_file = open("input.txt", "r",encoding="utf-8")
