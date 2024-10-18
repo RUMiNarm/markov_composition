@@ -1,6 +1,7 @@
 import markovify
 import MeCab
 
+
 # Load file
 # text_file = open("input.txt", "r",encoding="utf-8")
 # text = text_file.read()
