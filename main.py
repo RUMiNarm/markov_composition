@@ -1,10 +1,6 @@
 import markovify
 import MeCab
 
-
-# Load file
-# text_file = open("input.txt", "r",encoding="utf-8")
-# text = text_file.read()
 text = "ド ド ド ソ ソ ラ ラ ソ\nファ ファ ミ ミ レ レ ド\nソ ソ ファ ファ ミ ミ レ\nソ ソ ファ ファ ミ ミ レ\nド ド ソ ソ ラ ラ ソ\nファ ファ ミ ミ レ レ ド\n"
 
 # Parse text using MeCab
