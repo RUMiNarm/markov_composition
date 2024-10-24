@@ -6,7 +6,7 @@ def load_melody(filename):
     with open(filename, 'r', encoding='utf-8') as f:
         return [line.strip().split() for line in f.readlines()]
 
-# マルコフ連鎖用の遷移辞書を作成する関数
+# マルコフ連鎖用の遷移辞書を作成
 def build_markov_chain(melody_data):
     chain = defaultdict(lambda: defaultdict(int))
     for measure in melody_data:
@@ -40,7 +40,7 @@ def generate_melody(chain, length=16):
     
     return melody
 
-# メロディをテキスト形式で保存する関数
+# メロディを保存
 def save_melody(melody, filename="generated_melody.txt"):
     with open(filename, 'w', encoding='utf-8') as f:
         for i, note in enumerate(melody):
@@ -59,4 +59,3 @@ if __name__ == "__main__":
     
     # 生成したメロディを保存
     save_melody(generated_melody)
-    print("メロディが 'generated_melody.txt' に保存されました。")
