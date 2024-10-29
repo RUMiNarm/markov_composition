@@ -3,11 +3,17 @@ from collections import defaultdict
 
 FILE_NAME = "input_melody.txt" # メロディのファイル名
 MEASURE_SPLIT = ''
+NOTE_SPLIT = ''
+
+# 生成したい曲の長さの設定
+gen_measures = 8 # 小節数
+gen_notes_per_measure = 4 # 1小節あたりの音符数
+
 
 # メロディを読み込み
 def load_melody(filename):
     with open(filename, 'r', encoding='utf-8') as f:
-        # 空白で分けてリスト型でいれる。改行で列が変わる。
+        # 空白で分けてリスト型でいれる。改行で列が変わる(小節)。
         return [line.strip().split() for line in f.readlines()] 
 
 # 遷移辞書を作成
@@ -34,8 +40,8 @@ def generate_melody(chain, measures=8, notes_per_measure=4):
     # 辞書に登録されている(曲に出てくる)音符をリストにする
     all_notes = list(chain.keys())
 
-    # 初期音設定
-    current_note = 'ド'
+    # 初期音設定：全体の音符からランダムに選択
+    current_note = random.choice(all_notes)
 
     for _ in range(measures):
         measure = []
@@ -61,14 +67,14 @@ def generate_melody(chain, measures=8, notes_per_measure=4):
 def save_melody(melody, filename="generated_melody.txt"):
     with open(filename, 'w', encoding='utf-8') as f:
         for measure in melody:
-            f.write(''.join(measure) + MEASURE_SPLIT)  # 小節ごとに改行して保存
+            f.write(NOTE_SPLIT.join(measure) + MEASURE_SPLIT)  # 小節ごとに改行して保存
 
 if __name__ == "__main__":
     melody_data = load_melody(FILE_NAME)
 
     markov_chain = build_markov_chain(melody_data)
 
-    # 新しいメロディを生成（8小節、4音符）
-    generated_melody = generate_melody(markov_chain, measures=8, notes_per_measure=4)
+    # 新しいメロディを生成（遷移辞書、生成する小節数、生成する一小節あたりの音符数）
+    generated_melody = generate_melody(markov_chain, gen_measures, gen_notes_per_measure)
 
     save_melody(generated_melody)
