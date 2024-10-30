@@ -1,9 +1,10 @@
 import random
 from collections import defaultdict
+import json
 
 FILE_NAME = "input_melody.txt" # メロディのファイル名
-MEASURE_SPLIT = '\n'
-NOTE_SPLIT = ' '
+MEASURE_SPLIT = ''
+NOTE_SPLIT = ''
 
 # 生成したい曲の長さの設定
 gen_measures = 8 # 小節数
@@ -52,7 +53,7 @@ def build_markov_chain_by_position(melody_data):
 # 遷移確率から新しいメロディを生成
 def generate_melody_with_position(chain, measures, notes_per_measure):
     melody = []
-    all_notes = list(chain['middle'].keys())  # 全体の音符リスト
+    all_notes = list(chain['start'].keys())  # startの音符リスト
 
     for _ in range(measures):
         measure = []
@@ -89,15 +90,17 @@ def generate_melody_with_position(chain, measures, notes_per_measure):
 def save_melody(melody, filename="generated_melody.txt"):
     with open(filename, 'w', encoding='utf-8') as f:
         for measure in melody:
-            f.write(NOTE_SPLIT.join(measure) + MEASURE_SPLIT)  # 小節ごとに改行して保存
+            # 音符ごとにNOTE_SPLIT、小節ごとにMEASURE_SPLITを入れて保存
+            f.write(NOTE_SPLIT.join(measure) + MEASURE_SPLIT)
+
 
 if __name__ == "__main__":
     melody_data = load_melody(FILE_NAME)
 
     markov_chain = build_markov_chain_by_position(melody_data)
 
-    with open("markov_chain.txt", 'w', encoding='utf-8') as f:
-        f.writelines("\n".join(str(k)+","+str(v) for k,v in markov_chain.items()))
+    with open("markov_chain.json", 'w', encoding='utf-8') as f:
+        json.dump(markov_chain, f, ensure_ascii=False, indent=4)
 
     # 新しいメロディを生成（遷移辞書、生成する小節数、生成する一小節あたりの音符数）
     generated_melody = generate_melody_with_position(markov_chain, gen_measures, gen_notes_per_measure)
