@@ -1,29 +1,29 @@
+import json
 import random
 from collections import defaultdict
-import json
 
-FILE_NAME = "input_melody.txt" # メロディのファイル名
-MEASURE_SPLIT = ''
-NOTE_SPLIT = ''
+FILE_NAME = "input_melody.txt"  # メロディのファイル名
+MEASURE_SPLIT = ""
+NOTE_SPLIT = ""
 
 # 生成したい曲の長さの設定
-gen_measures = 8 # 小節数
-gen_notes_per_measure = 4 # 1小節あたりの音符数
+gen_measures = 8  # 小節数
+gen_notes_per_measure = 4  # 1小節あたりの音符数
 
 
 # メロディを読み込み
 def load_melody(filename):
-    with open(filename, 'r', encoding='utf-8') as f:
+    with open(filename, "r", encoding="utf-8") as f:
         # 空白で分けてリスト型でいれる。改行で列が変わる(小節)。
-        return [line.strip().split() for line in f.readlines()] 
+        return [line.strip().split() for line in f.readlines()]
 
 
 # 遷移辞書を作成
 def build_markov_chain_by_position(melody_data):
     chains = {
-        'start': defaultdict(lambda: defaultdict(int)),
-        'middle': defaultdict(lambda: defaultdict(int)),
-        'end': defaultdict(lambda: defaultdict(int)),
+        "start": defaultdict(lambda: defaultdict(int)),
+        "middle": defaultdict(lambda: defaultdict(int)),
+        "end": defaultdict(lambda: defaultdict(int)),
     }
 
     for measure in melody_data:
@@ -31,14 +31,14 @@ def build_markov_chain_by_position(melody_data):
             continue  # 音符が少なすぎる小節はスキップ
 
         # 小節の最初の音符 -> 2つ目の音符
-        chains['start'][measure[0]][measure[1]] += 1
+        chains["start"][measure[0]][measure[1]] += 1
 
         # 小節の途中の音符遷移
         for i in range(1, len(measure) - 1):
-            chains['middle'][measure[i]][measure[i + 1]] += 1
+            chains["middle"][measure[i]][measure[i + 1]] += 1
 
         # 小節の最後の音符
-        chains['end'][measure[-2]][measure[-1]] += 1
+        chains["end"][measure[-2]][measure[-1]] += 1
 
     # 確率を計算
     for chain in chains.values():
@@ -53,7 +53,7 @@ def build_markov_chain_by_position(melody_data):
 # 遷移確率から新しいメロディを生成
 def generate_melody_with_position(chain, measures, notes_per_measure):
     melody = []
-    all_notes = list(chain['start'].keys())  # startの音符リスト
+    all_notes = list(chain["start"].keys())  # startの音符リスト
 
     for _ in range(measures):
         measure = []
@@ -65,10 +65,10 @@ def generate_melody_with_position(chain, measures, notes_per_measure):
         for i in range(1, notes_per_measure):
             if i == notes_per_measure - 1:
                 # 小節の最後の音符
-                next_chain = chain['end']
+                next_chain = chain["end"]
             else:
                 # 小節の途中の音符
-                next_chain = chain['middle']
+                next_chain = chain["middle"]
 
             # 次の音符を選択
             next_notes = list(next_chain[current_note].keys())
@@ -88,7 +88,7 @@ def generate_melody_with_position(chain, measures, notes_per_measure):
 
 # メロディを保存
 def save_melody(melody, filename="generated_melody.txt"):
-    with open(filename, 'w', encoding='utf-8') as f:
+    with open(filename, "w", encoding="utf-8") as f:
         for measure in melody:
             # 音符ごとにNOTE_SPLIT、小節ごとにMEASURE_SPLITを入れて保存
             f.write(NOTE_SPLIT.join(measure) + MEASURE_SPLIT)
@@ -99,10 +99,12 @@ if __name__ == "__main__":
 
     markov_chain = build_markov_chain_by_position(melody_data)
 
-    with open("markov_chain.json", 'w', encoding='utf-8') as f:
+    with open("markov_chain.json", "w", encoding="utf-8") as f:
         json.dump(markov_chain, f, ensure_ascii=False, indent=4)
 
     # 新しいメロディを生成（遷移辞書、生成する小節数、生成する一小節あたりの音符数）
-    generated_melody = generate_melody_with_position(markov_chain, gen_measures, gen_notes_per_measure)
+    generated_melody = generate_melody_with_position(
+        markov_chain, gen_measures, gen_notes_per_measure
+    )
 
     save_melody(generated_melody)
