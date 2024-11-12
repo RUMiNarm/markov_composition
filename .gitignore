@@ -1,2 +1,16 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+.ruff_cache
+
+
 /generated_melody.txt
 /markov_chain.txt
