@@ -1,3 +1,4 @@
+import json
 import re
 from collections import Counter, defaultdict
 
@@ -36,7 +37,20 @@ def calculate_transition_probabilities(ngrams):
         total = sum(counter.values())
         probabilities[prefix] = {note: count / total for note, count in counter.items()}
 
+    # タプルのキーをJSONに保存できるように文字列に変換
+    probabilities = {
+        ",".join(prefix): transitions for prefix, transitions in probabilities.items()
+    }
     return probabilities
+
+
+def save_to_json(data, file_name):
+    """
+    データをJSONファイルに保存する
+    """
+    with open(file_name, "w", encoding="utf-8") as file:
+        json.dump(data, file, ensure_ascii=False, indent=4)
+    print(f"遷移確率を'{file_name}'に保存しました。")
 
 
 def main():
@@ -53,6 +67,9 @@ def main():
 
     # 遷移確率の計算
     probabilities = calculate_transition_probabilities(ngrams)
+
+    # 遷移確率をJSONファイルに保存
+    save_to_json(probabilities, "chain.json")
 
     # 遷移確率の結果を表示
     print("\n遷移確率:")
