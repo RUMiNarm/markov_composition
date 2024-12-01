@@ -1,110 +1,61 @@
-import json
-import random
-from collections import defaultdict
-
-FILE_NAME = "input_melody.txt"  # メロディのファイル名
-MEASURE_SPLIT = ""
-NOTE_SPLIT = ""
-
-# 生成したい曲の長さの設定
-gen_measures = 8  # 小節数
-gen_notes_per_measure = 4  # 1小節あたりの音符数
+import re
+from collections import Counter
 
 
-# メロディを読み込み
-def load_melody(filename):
-    with open(filename, "r", encoding="utf-8") as f:
-        # 空白で分けてリスト型でいれる。改行で列が変わる(小節)。
-        return [line.strip().split() for line in f.readlines()]
+def parse_melody(file_path):
+    """
+    ファイルからメロディを読み込み、音符ごとに分割する
+    """
+    with open(file_path, "r", encoding="utf-8") as file:
+        melody = file.read().strip()
+    # 正規表現で音符を抽出する
+    pattern = r"(＃[ドレミファソラシ]|ド|レ|ミ|ファ|ソ|ラ|シ)"
+    notes = re.findall(pattern, melody)
+    return notes
 
 
-# 遷移辞書を作成
-def build_markov_chain_by_position(melody_data):
-    chains = {
-        "start": defaultdict(lambda: defaultdict(int)),
-        "middle": defaultdict(lambda: defaultdict(int)),
-        "end": defaultdict(lambda: defaultdict(int)),
-    }
-
-    for measure in melody_data:
-        if len(measure) < 2:
-            continue  # 音符が少なすぎる小節はスキップ
-
-        # 小節の最初の音符 -> 2つ目の音符
-        chains["start"][measure[0]][measure[1]] += 1
-
-        # 小節の途中の音符遷移
-        for i in range(1, len(measure) - 1):
-            chains["middle"][measure[i]][measure[i + 1]] += 1
-
-        # 小節の最後の音符
-        chains["end"][measure[-2]][measure[-1]] += 1
-
-    # 確率を計算
-    for chain in chains.values():
-        for current, transitions in chain.items():
-            total = sum(transitions.values())
-            for next_note in transitions:
-                transitions[next_note] /= total
-
-    return chains
+def generate_ngrams(notes, n):
+    """
+    N-gramを生成する
+    """
+    ngrams = [tuple(notes[i : i + n]) for i in range(len(notes) - n + 1)]
+    return ngrams
 
 
-# 遷移確率から新しいメロディを生成
-def generate_melody_with_position(chain, measures, notes_per_measure):
-    melody = []
-    all_notes = list(chain["start"].keys())  # startの音符リスト
-
-    for _ in range(measures):
-        measure = []
-
-        # 小節の最初の音符
-        current_note = random.choice(all_notes)
-        measure.append(current_note)
-
-        for i in range(1, notes_per_measure):
-            if i == notes_per_measure - 1:
-                # 小節の最後の音符
-                next_chain = chain["end"]
-            else:
-                # 小節の途中の音符
-                next_chain = chain["middle"]
-
-            # 次の音符を選択
-            next_notes = list(next_chain[current_note].keys())
-            probabilities = list(next_chain[current_note].values())
-
-            if next_notes:
-                current_note = random.choices(next_notes, probabilities)[0]
-            else:
-                current_note = random.choice(all_notes)
-
-            measure.append(current_note)
-
-        melody.append(measure)
-
-    return melody
+def analyze_ngrams(ngrams, top_k=None):
+    """
+    N-gramの頻度を集計し、上位top_k個を返す
+    """
+    ngram_counts = Counter(ngrams)
+    if top_k:
+        return ngram_counts.most_common(top_k)
+    return ngram_counts.most_common()
 
 
-# メロディを保存
-def save_melody(melody, filename="generated_melody.txt"):
-    with open(filename, "w", encoding="utf-8") as f:
-        for measure in melody:
-            # 音符ごとにNOTE_SPLIT、小節ごとにMEASURE_SPLITを入れて保存
-            f.write(NOTE_SPLIT.join(measure) + MEASURE_SPLIT)
+def main():
+    file_path = input("メロディのテキストファイルのパスを入力してください: ")
+    n = int(input("Nの値を入力してください (例: 2): "))
+    top_k = input(
+        "注目する上位の音数を指定してください (例: 5, すべて表示する場合はEnter): "
+    )
+    top_k = int(top_k) if top_k.isdigit() else None
+
+    # メロディの読み込みと音符分割
+    notes = parse_melody(file_path)
+    print(f"\n音符のリスト: {notes}")
+
+    # N-gramの生成
+    ngrams = generate_ngrams(notes, n)
+    print(f"\nN-gramのリスト: {ngrams}")
+
+    # N-gramの頻度分析
+    ngram_counts = analyze_ngrams(ngrams, top_k)
+
+    # 結果を表示
+    print("\nN-gram頻度ランキング:")
+    for ngram, count in ngram_counts:
+        print(f"{ngram}: {count}回")
 
 
 if __name__ == "__main__":
-    melody_data = load_melody(FILE_NAME)
-
-    markov_chain = build_markov_chain_by_position(melody_data)
-
-    with open("markov_chain.json", "w", encoding="utf-8") as f:
-        json.dump(markov_chain, f, ensure_ascii=False, indent=4)
-
-    # 新しいメロディを生成（遷移辞書、生成する小節数、生成する一小節あたりの音符数）
-    generated_melody = generate_melody_with_position(
-        markov_chain, gen_measures, gen_notes_per_measure
-    )
-
-    save_melody(generated_melody)
+    main()
