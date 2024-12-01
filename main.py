@@ -1,5 +1,5 @@
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 
 
 def parse_melody(file_path):
@@ -16,45 +16,50 @@ def parse_melody(file_path):
 
 def generate_ngrams(notes, n):
     """
-    N-gramを生成する
+    N個の音符を元に次の音符を求めるためのデータを生成
     """
-    ngrams = [tuple(notes[i : i + n]) for i in range(len(notes) - n + 1)]
+    ngrams = [(tuple(notes[i : i + n]), notes[i + n]) for i in range(len(notes) - n)]
     return ngrams
 
 
-def analyze_ngrams(ngrams, top_k=None):
+def calculate_transition_probabilities(ngrams):
     """
-    N-gramの頻度を集計し、上位top_k個を返す
+    N個の音符を元に次の音符の遷移確率を計算する
     """
-    ngram_counts = Counter(ngrams)
-    if top_k:
-        return ngram_counts.most_common(top_k)
-    return ngram_counts.most_common()
+    transitions = defaultdict(Counter)
+
+    for prefix, next_note in ngrams:
+        transitions[prefix][next_note] += 1
+
+    probabilities = {}
+    for prefix, counter in transitions.items():
+        total = sum(counter.values())
+        probabilities[prefix] = {note: count / total for note, count in counter.items()}
+
+    return probabilities
 
 
 def main():
     file_path = input("メロディのテキストファイルのパスを入力してください: ")
-    n = int(input("Nの値を入力してください (例: 2): "))
-    top_k = input(
-        "注目する上位の音数を指定してください (例: 5, すべて表示する場合はEnter): "
-    )
-    top_k = int(top_k) if top_k.isdigit() else None
+    n = int(input("Nの値を入力してください (例: 3): "))
 
     # メロディの読み込みと音符分割
     notes = parse_melody(file_path)
     print(f"\n音符のリスト: {notes}")
 
-    # N-gramの生成
+    # N-gramの生成 (N個の音符を元に次の音符を求める)
     ngrams = generate_ngrams(notes, n)
     print(f"\nN-gramのリスト: {ngrams}")
 
-    # N-gramの頻度分析
-    ngram_counts = analyze_ngrams(ngrams, top_k)
+    # 遷移確率の計算
+    probabilities = calculate_transition_probabilities(ngrams)
 
-    # 結果を表示
-    print("\nN-gram頻度ランキング:")
-    for ngram, count in ngram_counts:
-        print(f"{ngram}: {count}回")
+    # 遷移確率の結果を表示
+    print("\n遷移確率:")
+    for prefix, transitions in probabilities.items():
+        print(f"{prefix}:")
+        for note, prob in transitions.items():
+            print(f"  {note}: {prob:.2f}")
 
 
 if __name__ == "__main__":
