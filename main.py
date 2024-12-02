@@ -1,21 +1,51 @@
 import json
-import random
+import os
+import re
 from collections import defaultdict
 
-FILE_NAME = "input_melody.txt"  # メロディのファイル名
-MEASURE_SPLIT = ""
-NOTE_SPLIT = ""
+FOLDER_PATH = "children_songs"  # メロディが保存されているフォルダ
 
-# 生成したい曲の長さの設定
-gen_measures = 8  # 小節数
-gen_notes_per_measure = 4  # 1小節あたりの音符数
+# 音符リスト
+NOTES = [
+    "ド",
+    "レ",
+    "ミ",
+    "ファ",
+    "ソ",
+    "ラ",
+    "シ",
+    "＃ド",
+    "＃レ",
+    "＃ミ",
+    "＃ファ",
+    "＃ソ",
+    "＃ラ",
+    "＃シ",
+    "♭ド",
+    "♭レ",
+    "♭ミ",
+    "♭ファ",
+    "♭ソ",
+    "♭ラ",
+    "♭シ",
+]
+
+# 正規表現で音符を抽出
+NOTE_PATTERN = re.compile("|".join(re.escape(note) for note in NOTES))
 
 
-# メロディを読み込み
-def load_melody(filename):
-    with open(filename, "r", encoding="utf-8") as f:
-        # 空白で分けてリスト型でいれる。改行で列が変わる(小節)。
-        return [line.strip().split() for line in f.readlines()]
+# フォルダ内のすべてのテキストファイルからメロディを読み込み
+def load_all_melodies(folder_path):
+    melodies = []
+    for file_name in os.listdir(folder_path):
+        if file_name.endswith(".txt"):
+            file_path = os.path.join(folder_path, file_name)
+            with open(file_path, "r", encoding="utf-8") as f:
+                # 正規表現で音符を分割し、小節単位でリストを作成
+                melodies.extend(
+                    [NOTE_PATTERN.findall(line.strip()) for line in f.readlines()]
+                )
+    return melodies
 
 
 # 遷移辞書を作成
@@ -50,61 +80,13 @@ def build_markov_chain_by_position(melody_data):
     return chains
 
 
-# 遷移確率から新しいメロディを生成
-def generate_melody_with_position(chain, measures, notes_per_measure):
-    melody = []
-    all_notes = list(chain["start"].keys())  # startの音符リスト
-
-    for _ in range(measures):
-        measure = []
-
-        # 小節の最初の音符
-        current_note = random.choice(all_notes)
-        measure.append(current_note)
-
-        for i in range(1, notes_per_measure):
-            if i == notes_per_measure - 1:
-                # 小節の最後の音符
-                next_chain = chain["end"]
-            else:
-                # 小節の途中の音符
-                next_chain = chain["middle"]
-
-            # 次の音符を選択
-            next_notes = list(next_chain[current_note].keys())
-            probabilities = list(next_chain[current_note].values())
-
-            if next_notes:
-                current_note = random.choices(next_notes, probabilities)[0]
-            else:
-                current_note = random.choice(all_notes)
-
-            measure.append(current_note)
-
-        melody.append(measure)
-
-    return melody
-
-
-# メロディを保存
-def save_melody(melody, filename="generated_melody.txt"):
-    with open(filename, "w", encoding="utf-8") as f:
-        for measure in melody:
-            # 音符ごとにNOTE_SPLIT、小節ごとにMEASURE_SPLITを入れて保存
-            f.write(NOTE_SPLIT.join(measure) + MEASURE_SPLIT)
-
-
 if __name__ == "__main__":
-    melody_data = load_melody(FILE_NAME)
+    # フォルダ内のすべてのテキストファイルからメロディを読み込む
+    melody_data = load_all_melodies(FOLDER_PATH)
 
+    # マルコフ連鎖を構築
     markov_chain = build_markov_chain_by_position(melody_data)
 
+    # JSONファイルに保存
     with open("markov_chain.json", "w", encoding="utf-8") as f:
         json.dump(markov_chain, f, ensure_ascii=False, indent=4)
-
-    # 新しいメロディを生成（遷移辞書、生成する小節数、生成する一小節あたりの音符数）
-    generated_melody = generate_melody_with_position(
-        markov_chain, gen_measures, gen_notes_per_measure
-    )
-
-    save_melody(generated_melody)
