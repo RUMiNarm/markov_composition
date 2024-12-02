@@ -41,37 +41,42 @@ def load_json(file_name):
         return json.load(f)
 
 
-def prepare_heatmap_data(data, position):
+def prepare_heatmap_data(data):
     """
-    遷移確率データをヒートマップ用のデータに整形
+    遷移確率データと出現回数をヒートマップ用のデータに整形
     """
-    transition_data = data[position]
+    probabilities = data["transition_probabilities"]
+    prefix_counts = data["prefix_counts"]
 
-    # 全ての音符を行・列として設定
-    all_notes = set()
-    for current, transitions in transition_data.items():
-        all_notes.add(current)
-        all_notes.update(transitions.keys())
+    # 全ての音符を列として設定
+    all_next_notes = set()
+    for transitions in probabilities.values():
+        all_next_notes.update(transitions.keys())
 
     # 音階順にソート
-    sorted_notes = sorted(
-        all_notes,
+    sorted_next_notes = sorted(
+        all_next_notes,
         key=lambda x: NOTE_ORDER.index(x) if x in NOTE_ORDER else len(NOTE_ORDER),
+    )
+
+    # Y軸（遷移元）を出現回数順にソート
+    sorted_prefixes = sorted(
+        prefix_counts.keys(), key=lambda x: prefix_counts[x], reverse=True
     )
 
     # データフレームを作成
     heatmap_data = pd.DataFrame(
-        0, index=sorted_notes, columns=sorted_notes, dtype=float
+        0, index=sorted_prefixes, columns=sorted_next_notes, dtype=float
     )
 
-    for current, transitions in transition_data.items():
+    for prefix, transitions in probabilities.items():
         for next_note, prob in transitions.items():
-            heatmap_data.loc[current, next_note] = prob
+            heatmap_data.loc[prefix, next_note] = prob
 
-    return heatmap_data
+    return heatmap_data, prefix_counts
 
 
-def plot_heatmap(heatmap_data, title, output_file):
+def plot_heatmap(heatmap_data, prefix_counts, title, output_file):
     """
     ヒートマップをプロットして保存
     """
@@ -84,9 +89,15 @@ def plot_heatmap(heatmap_data, title, output_file):
         cbar=True,  # カラーバーを表示
         linewidths=0.5,  # セルの境界線を設定
     )
+    # Y軸ラベルに出現回数を追加
+    plt.yticks(
+        ticks=range(len(heatmap_data.index)),
+        labels=[f"{prefix} ({prefix_counts[prefix]})" for prefix in heatmap_data.index],
+        rotation=0,
+    )
     plt.title(title, fontsize=16)
     plt.xlabel("次の音符", fontsize=12)
-    plt.ylabel("現在の音符", fontsize=12)
+    plt.ylabel("遷移元（出現回数）", fontsize=12)
     plt.xticks(rotation=45, fontsize=10)
     plt.yticks(fontsize=10)
     plt.tight_layout()
@@ -98,17 +109,14 @@ def plot_heatmap(heatmap_data, title, output_file):
 
 
 def main():
-    json_file = "markov_chain.json"  # 入力JSONファイル名
+    json_file = "transition_probabilities.json"  # 入力JSONファイル名
     data = load_json(json_file)
 
-    # 各位置のヒートマップを作成
-    for position, title in zip(
-        ["start", "middle", "end"],
-        ["小節の最初の遷移確率", "小節の途中の遷移確率", "小節の最後の遷移確率"],
-    ):
-        heatmap_data = prepare_heatmap_data(data, position)
-        output_file = f"heatmap_{position}.png"
-        plot_heatmap(heatmap_data, title, output_file)
+    # ヒートマップを作成
+    heatmap_data, prefix_counts = prepare_heatmap_data(data)
+    plot_heatmap(
+        heatmap_data, prefix_counts, "遷移確率ヒートマップ", "heatmap_sorted.png"
+    )
 
 
 if __name__ == "__main__":
