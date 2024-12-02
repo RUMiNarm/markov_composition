@@ -1,23 +1,37 @@
 import json
+import os
 import re
 from collections import Counter, defaultdict
 
 
-def parse_melody(file_path):
-    # ファイルからメロディを読み込み、音符ごとに分割する
-    with open(file_path, "r", encoding="utf-8") as file:
-        melody = file.read().strip()
+# 指定されたフォルダ内のすべてのテキストファイルを読み込む
+def read_all_files(folder_path):
+    melodies = []
+    for file_name in os.listdir(folder_path):
+        if file_name.endswith(".txt"):
+            file_path = os.path.join(folder_path, file_name)
+            with open(file_path, "r", encoding="utf-8") as file:
+                melody = file.read().strip()
+                melodies.append(melody)
+    return melodies
 
+
+def parse_melody(melody):
     # 正規表現で音符を定義
-    pattern = r"(＃[ドレミファソラシ]|♭[ドレミファソラシ]|ド|レ|ミ|ファ|ソ|ラ|シ)"
+    pattern = r"(＃ファ|＃ド|＃レ|＃ミ|＃ソ|＃ラ|＃シ|♭ファ|♭ド|♭レ|♭ミ|♭ソ|♭ラ|♭シ|ファ|ド|レ|ミ|ソ|ラ|シ)"
     # 正規表現で定義した音符をテキストから抽出
     notes = re.findall(pattern, melody)
     return notes
 
 
 # N個の音符を元に次の音符のタプル(リスト)を作成
-def generate_ngrams(notes, n):
-    ngrams = [(tuple(notes[i : i + n]), notes[i + n]) for i in range(len(notes) - n)]
+def generate_ngrams_from_all(melodies, n):
+    ngrams = []
+    for melody in melodies:
+        notes = parse_melody(melody)
+        ngrams.extend(
+            [(tuple(notes[i : i + n]), notes[i + n]) for i in range(len(notes) - n)]
+        )
     return ngrams
 
 
@@ -41,7 +55,8 @@ def calculate_transition_probabilities(ngrams):
 
     # タプルのキーをJSON形式に文字列に変換
     probabilities = {
-        ",".join(prefix): transitions for prefix, transitions in probabilities.items()
+        ",".join(prefix): {note: prob for note, prob in next_notes.items()}
+        for prefix, next_notes in probabilities.items()
     }
     return probabilities
 
@@ -53,15 +68,15 @@ def save_to_json(data, file_name):
 
 
 def main():
-    file_path = "children_songs\Osakanatengoku.txt"
+    folder_path = "children_songs"
     n = int(input("N："))
 
     # メロディの読み込みと音符分割
-    notes = parse_melody(file_path)
-    print(f"\n音符のリスト: {notes}")
+    melodies = read_all_files(folder_path)
+    print(f"\n音符のリスト: {melodies}")
 
     # N-gramの生成
-    ngrams = generate_ngrams(notes, n)
+    ngrams = generate_ngrams_from_all(melodies, n)
     print(f"\nN-gramのリスト: {ngrams}")
 
     # 遷移確率の計算
