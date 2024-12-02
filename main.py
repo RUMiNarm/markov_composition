@@ -35,8 +35,10 @@ def generate_ngrams_from_all(melodies, n):
     return ngrams
 
 
-# N個の音符を元に次の音符の遷移確率を計算
-def calculate_transition_probabilities(ngrams):
+# N個の音符を元に次の音符の遷移確率を計算、遷移元の出現回数もカウント
+def calculate_ngram_counts_and_probabilities(ngrams):
+    # 遷移元の出現回数カウント
+    prefix_counts = Counter(prefix for prefix, _ in ngrams)
     # 音符の辞書を作成
     transitions = defaultdict(Counter)
 
@@ -53,12 +55,14 @@ def calculate_transition_probabilities(ngrams):
         # 辞書形式で格納
         probabilities[prefix] = {note: count / total for note, count in counter.items()}
 
-    # タプルのキーをJSON形式に文字列に変換
-    probabilities = {
-        ",".join(prefix): {note: prob for note, prob in next_notes.items()}
+    # JSONに保存可能な形式に変換（タプルをそのまま使用）
+    prefix_counts_json = {str(prefix): count for prefix, count in prefix_counts.items()}
+    probabilities_json = {
+        str(prefix): {note: prob for note, prob in next_notes.items()}
         for prefix, next_notes in probabilities.items()
     }
-    return probabilities
+
+    return prefix_counts_json, probabilities_json
 
 
 # データをJSONファイルに保存する
@@ -79,11 +83,12 @@ def main():
     ngrams = generate_ngrams_from_all(melodies, n)
     print(f"\nN-gramのリスト: {ngrams}")
 
-    # 遷移確率の計算
-    probabilities = calculate_transition_probabilities(ngrams)
+    # 出現回数と遷移確率の計算
+    prefix_counts, probabilities = calculate_ngram_counts_and_probabilities(ngrams)
 
-    # 遷移確率をJSONファイルに保存
-    save_to_json(probabilities, "chain.json")
+    # データを統合してJSONファイルに保存
+    result = {"prefix_counts": prefix_counts, "transition_probabilities": probabilities}
+    save_to_json(result, "chain.json")
 
     # 遷移確率の結果を表示
     print("\n遷移確率:")
