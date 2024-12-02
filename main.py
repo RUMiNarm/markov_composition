@@ -49,44 +49,35 @@ def load_all_melodies(folder_path):
 
 
 # 遷移辞書を作成
-def build_markov_chain_by_position(melody_data):
-    chains = {
-        "start": defaultdict(lambda: defaultdict(int)),
-        "middle": defaultdict(lambda: defaultdict(int)),
-        "end": defaultdict(lambda: defaultdict(int)),
-    }
+def build_transition_probabilities(melody_data):
+    transitions = defaultdict(lambda: defaultdict(int))
 
     for measure in melody_data:
         if len(measure) < 2:
             continue  # 音符が少なすぎる小節はスキップ
 
-        # 小節の最初の音符 -> 2つ目の音符
-        chains["start"][measure[0]][measure[1]] += 1
-
-        # 小節の途中の音符遷移
-        for i in range(1, len(measure) - 1):
-            chains["middle"][measure[i]][measure[i + 1]] += 1
-
-        # 小節の最後の音符
-        chains["end"][measure[-2]][measure[-1]] += 1
+        # 各小節内での音符の遷移を記録
+        for i in range(len(measure) - 1):
+            transitions[measure[i]][measure[i + 1]] += 1
 
     # 確率を計算
-    for chain in chains.values():
-        for current, transitions in chain.items():
-            total = sum(transitions.values())
-            for next_note in transitions:
-                transitions[next_note] /= total
+    probabilities = {}
+    for current, next_notes in transitions.items():
+        total = sum(next_notes.values())
+        probabilities[current] = {
+            next_note: count / total for next_note, count in next_notes.items()
+        }
 
-    return chains
+    return probabilities
 
 
 if __name__ == "__main__":
     # フォルダ内のすべてのテキストファイルからメロディを読み込む
     melody_data = load_all_melodies(FOLDER_PATH)
 
-    # マルコフ連鎖を構築
-    markov_chain = build_markov_chain_by_position(melody_data)
+    # 遷移確率を計算
+    transition_probabilities = build_transition_probabilities(melody_data)
 
     # JSONファイルに保存
-    with open("markov_chain.json", "w", encoding="utf-8") as f:
-        json.dump(markov_chain, f, ensure_ascii=False, indent=4)
+    with open("transition_probabilities.json", "w", encoding="utf-8") as f:
+        json.dump(transition_probabilities, f, ensure_ascii=False, indent=4)
